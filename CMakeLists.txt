@@ -20,4 +20,4 @@ project(JustCircle CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_executable(JustCircle main.cpp)
+add_subdirectory(src/reflection)
