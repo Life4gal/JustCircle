@@ -1,6 +1,11 @@
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <type_traits>
+#include <algorithm>
+#include <random>
+#include <vector>
+#include <array>
 
 namespace
 {
@@ -27,7 +32,7 @@ namespace enum_with_attribute
 	{
 		print(
 				std::string{"Feel the magical power of "} +
-				@type_string(Enum) + "[" +
+				@type_string(Enum) + "(" + std::to_string(@enum_count(Enum)) + ")[" +
 				@attribute(Enum, full_name) + "](" +
 				@attribute(Enum, description) + ") in function " +
 				__func__ + "!");
@@ -180,7 +185,7 @@ namespace enum_with_type
 	{
 		print(
 				std::string{"Feel the magical power of "} +
-				@type_string(Enum) + " in function " +
+				@type_string(Enum) + "(" + std::to_string(@enum_count(Enum)) + ") in function " +
 				__func__ + "!");
 
 		print(std::string{"\t-> "} + @enum_type_strings(Enum))...;
@@ -200,8 +205,164 @@ namespace enum_with_type
 	}
 }
 
+namespace enum_with_algorithm
+{
+	template<typename Container>
+	constexpr void shuffle(Container& container)
+	{
+		auto engine = std::default_random_engine{};
+//		std::ranges::shuffle(container, engine);
+		std::shuffle(std::begin(container), std::end(container), engine);
+	}
+
+	template<bool NeedStable = true, typename Container>
+	constexpr auto unique(Container& container)
+	{
+		if constexpr(NeedStable)
+		{
+			auto begin = std::begin(container);
+			auto end = begin;
+			for(auto& v: container)
+			{
+				if(end == std::find(begin, end, v))
+				{
+					*end++ = std::move(v);
+				}
+			}
+			container.resize(std::distance(begin, end));
+		}
+		else
+		{
+//			std::ranges::sort(std::begin(container), std::end(container));
+			std::sort(std::begin(container), std::end(container));
+
+//			auto range = std::ranges::unique(container);
+//			container.erase(range.begin(), range.end());
+			auto it = std::unique(std::begin(container), std::end(container));
+			container.erase(it, std::end(container));
+
+		}
+	}
+
+	enum typename enum_template
+	{
+		char,
+		wchar_t,
+		char8_t,
+		char16_t,
+		char32_t,
+		char,
+
+		int,
+		int[1],
+		int[2],
+		int[3],
+		int,
+
+		void,
+		void*,
+		void**,
+		void,
+
+		float,
+		double,
+		long double,
+	};
+
+	enum typename enum_but_shuffled
+	{
+		// enum_template ==> @mtype
+		// @mtype is a builtin type that encapsulates a type and has comparison/relational operators defined. You can sort or unique with it.
+		@meta std::array types{@dynamic_type(@enum_types(enum_template))...};
+
+		// shuffle it
+		@meta shuffle(types);
+
+		// expand it
+		@pack_type(types)...;
+	};
+
+	enum typename enum_but_unique_stable
+	{
+		// elements may be removed, use vector.
+		@meta std::vector types{@dynamic_type(@enum_types(enum_template))...};
+
+		@meta unique<true>(types);
+
+		@pack_type(types)...;
+	};
+
+	enum typename enum_but_unique_not_stable
+	{
+		// elements may be removed, use vector.
+		@meta std::vector types{@dynamic_type(@enum_types(enum_template))...};
+
+		@meta unique<false>(types);
+
+		@pack_type(types)...;
+	};
+
+	enum typename enum_but_sorted
+	{
+		// elements will not be removed, use array.
+		@meta std::array types{@dynamic_type(@enum_types(enum_template))...};
+
+		@meta std::sort(types.begin(), types.end());
+
+		@pack_type(types)...;
+	};
+
+	enum typename enum_but_sorted_lexicographically
+	{
+		// elements will not be removed, use array.
+		@meta std::array types{@enum_type_strings(enum_template)...};
+
+		// short strings will be "less than" long strings
+		// lexicographical order only if the lengths are the same
+		@meta std::sort(types.begin(), types.end());
+
+		// string ==> type
+		@meta for(const auto& type: types)
+		{
+			@type_id(type);
+		}
+	};
+
+	enum typename enum_but_sorted_lexicographically_stable
+	{
+		// elements will not be removed, use array.
+		// expand the string spellings of the types into an array, along with the index into the type.
+//		@meta std::array types{std::make_pair<std::string, int>(@enum_type_strings(enum_template), int...)...};
+		@meta std::array types{std::make_pair(@enum_type_strings(enum_template), int...)...};
+
+		// Lexicographically sort the types.
+//		@meta std::sort(types.begin(), types.end());
+		@meta std::sort(
+				   types.begin(),
+				   types.end(),
+				   [](const auto& lhs, const auto& rhs)
+				   {
+						if(const auto result = std::strcmp(lhs.first, rhs.first);
+						result < 0)
+						{
+							return true;
+						}
+						else if(result == 0)
+						{
+							return lhs.second < rhs.second;
+						}
+						return false;
+					});
+
+		// get enum value from enum_template based on index
+		@enum_type(enum_template, @pack_nontype(types).second)...;
+	};
+}
+
 int main()
 {
+	@meta print(std::string{"CXX_STANDARD_VERSION ==> "} + std::to_string(__cplusplus));
+
 	@meta print("===========================");
 	print("===========================");
 
@@ -225,4 +386,22 @@ int main()
 
 	@meta print("===========================");
 	print("===========================");
+
+	@meta enum_with_type::print_enum_with_type<enum_with_algorithm::enum_but_shuffled>();
+	enum_with_type::print_enum_with_type<enum_with_algorithm::enum_but_shuffled>();
+
+	@meta enum_with_type::print_enum_with_type<enum_with_algorithm::enum_but_unique_stable>();
+	enum_with_type::print_enum_with_type<enum_with_algorithm::enum_but_unique_stable>();
+
+	@meta enum_with_type::print_enum_with_type<enum_with_algorithm::enum_but_unique_not_stable>();
+	enum_with_type::print_enum_with_type<enum_with_algorithm::enum_but_unique_not_stable>();
+
+	@meta enum_with_type::print_enum_with_type<enum_with_algorithm::enum_but_sorted>();
+	enum_with_type::print_enum_with_type<enum_with_algorithm::enum_but_sorted>();
+
+	@meta enum_with_type::print_enum_with_type<enum_with_algorithm::enum_but_sorted_lexicographically>();
+	enum_with_type::print_enum_with_type<enum_with_algorithm::enum_but_sorted_lexicographically>();
+
+	@meta enum_with_type::print_enum_with_type<enum_with_algorithm::enum_but_sorted_lexicographically_stable>();
+	enum_with_type::print_enum_with_type<enum_with_algorithm::enum_but_sorted_lexicographically_stable>();
 }

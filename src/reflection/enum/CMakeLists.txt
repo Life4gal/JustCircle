@@ -12,3 +12,5 @@ add_executable(
 		${PROJECT_NAME}
 		${SOURCE_FILES}
 )
+
+cmake_language(CALL set_compile_options ${PROJECT_NAME})
