@@ -11,80 +11,96 @@ namespace
 
 namespace enum_with_attribute
 {
-	using default_type = void;
+	using full_name [[attribute]] = const char*;
+	using description [[attribute]] = const char*;
 
-	using name [[attribute]] = const char*;
-	using type [[attribute(default_type)]] = typename;
-	using value [[attribute(.1f)]] = float;
-
-	enum class magic_enum
+	enum class [[.full_name = "error_codes", .description = "System independent error codes"]] errc
 	{
-		a [[.name = "magic_A", .type = int, .value = 3.14f]],
-		b [[.name = "magic_B", .type = double, .value = 9.9f]],
-		c [[.name = "magic_B", .type, .value = 0.1f]],
-		d [[.name = "magic_C"]],
-		e
+		MY_OK,
+		MY_EBADF [[.full_name = "bad_file_descriptor", .description = "The argument is an invalid descriptor"]],
+		MY_EBADMSG [[.full_name = "bad_message", .description = "Bad message"]]
 	};
 
 	template<typename Enum>
 	constexpr void print_enum_with_attribute()
 	{
-		@meta print(std::string{"Feel the magical power of "} + __func__ + "!");
+		print(
+				std::string{"Feel the magical power of "} +
+				@type_string(Enum) + "[" +
+				@attribute(Enum, full_name) + "](" +
+				@attribute(Enum, description) + ") in function " +
+				__func__ + "!");
 
-		@meta print("magic for-index-loop:");
+		print("magic for-index-loop:");
 		@meta for(decltype(@enum_count(Enum)) i = 0; i < @enum_count(Enum); ++i)
 		{
-			@meta std::string message{@enum_name(Enum, i)};
-			@meta message += " - ";
+			std::string message_fil{@enum_name(Enum, i)};
+			message_fil += " - ";
 
-			if constexpr(@enum_has_attribute(Enum, i, name))
+			if constexpr(@enum_has_attribute(Enum, i, full_name))
 			{
-				@meta message += @enum_attribute(Enum, i, name);
+				message_fil += "fullname: ";
+				message_fil += @enum_attribute(Enum, i, full_name);
 			}
 			else
 			{
-				@meta message += "anonymous";
+				message_fil += "<unknown full name>";
 			}
 
-			@meta message += " - ";
+			message_fil += " - ";
 
-			if constexpr(@enum_has_attribute(Enum, i, type))
+			if constexpr(@enum_has_attribute(Enum, i, description))
 			{
-				// todo
-				if constexpr(@type_id(@enum_attribute(Enum, i, type)) == default_type)
-				{
-					@meta message += @type_string(default_type) + " type";
-				}
-				else
-				{
-					// @meta message += @type_string(@enum_tattribute(Enum, i, type)) + " type";
-					// todo
-					@meta message += "custom type";
-				}
+				message_fil += "description: ";
+				message_fil += @enum_attribute(Enum, i, description);
 			}
 			else
 			{
-				@meta message += "none type";
+				message_fil += "no description";
 			}
 
-			@meta message += " - ";
+			message_fil += '.';
+			print(message_fil);
+		}
 
-			if constexpr(@enum_has_attribute(Enum, i, value))
+		print("magic ranged-for-loop:");
+		@meta for enum(Enum e : Enum)
+		{
+			// todo: cannot have the same name as the 'message' variable above, even though they don't appear to be in the same scope.
+			std::string message_rfl{@enum_name(e)};
+			message_rfl += @enum_name(e);
+			message_rfl += " - ";
+
+			if constexpr(@enum_has_attribute(e, full_name))
 			{
-				@meta message += "value: " + std::to_string(@enum_attribute(Enum, i, value));
+				message_rfl += "fullname: ";
+				message_rfl += @enum_attribute(e, full_name);
 			}
 			else
 			{
-				@meta message += "no value";
+				message_rfl += "<unknown full name>";
 			}
 
-			@meta message += '.';
-			@meta print(message);
+			message_rfl += " - ";
+
+			if constexpr(@enum_has_attribute(e, description))
+			{
+				message_rfl += "description: ";
+				message_rfl += @enum_attribute(e, description);
+			}
+			else
+			{
+				message_rfl += "no description";
+			}
+
+			message_rfl += '.';
+			print(message_rfl);
 		}
 	}
 }
 
 int main()
 {
-	enum_with_attribute::print_enum_with_attribute<enum_with_attribute::magic_enum>();
+	@meta enum_with_attribute::print_enum_with_attribute<enum_with_attribute::errc>();
+	enum_with_attribute::print_enum_with_attribute<enum_with_attribute::errc>();
 }
