@@ -1,0 +1,3 @@
+compilers:
+    - description: circle compiler
+      match-compiler-exe: "circle"

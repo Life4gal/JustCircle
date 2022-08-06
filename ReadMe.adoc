@@ -1,0 +1,17 @@
+= JustCircle
+:toc:
+:toc-placement!:
+
+toc::[]
+
+== Introduction
+
+> Life is short, I use circle.
+
+== Requirements
+
+Just download the https://www.circle-lang.org/[circle] compiler!
+
+== Note
+
+todo
