@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <type_traits>
 
 namespace
 {
@@ -99,8 +100,129 @@ namespace enum_with_attribute
 	}
 }
 
+namespace enum_with_type
+{
+	enum typename boolean_type
+	{
+		bool,
+	};
+
+	enum typename char_type
+	{
+		char,
+		wchar_t,
+		char8_t,
+		char16_t,
+		char32_t,
+	};
+
+	enum typename char_type_but_reversed
+	{
+		@enum_types(char_type)...[::-1]...;
+	};
+
+	enum typename int_type
+	{
+		short,
+		int,
+		long,
+		long long,
+	};
+
+	enum typename int_type_but_const
+	{
+		@meta for enum(int_type e: int_type)
+		{
+			std::add_const_t<@enum_type(e)>;
+		}
+	};
+
+	enum typename integral_type
+	{
+		@enum_types(boolean_type)...;
+		@enum_types(char_type)...;
+		@enum_types(int_type)...;
+	};
+
+	enum typename floating_point_type
+	{
+		float,
+		double,
+		long double,
+	};
+
+	enum typename arithmetic_type
+	{
+		@enum_types(integral_type)...;
+		@enum_types(floating_point_type)...;
+	};
+
+	enum typename arithmetic_but_const_lvalue_reference
+	{
+		@meta for enum(auto e: arithmetic_type)
+		{
+			// There is some problem with the name printed here, but the type is correct.
+			// std::add_const<T>::type :(
+			std::add_const_t<std::add_lvalue_reference_t<@enum_type(e)>>;
+		}
+	};
+
+	enum typename arithmetic_but_only_floating_point_and_reversed
+	{
+		// long double --> -1
+		// double --> -2
+		// float --> -3
+		@enum_types(arithmetic_type)...[:-4:-1]...;
+	};
+
+	template<typename Enum>
+	constexpr void print_enum_with_type()
+	{
+		print(
+				std::string{"Feel the magical power of "} +
+				@type_string(Enum) + " in function " +
+				__func__ + "!");
+
+		print(std::string{"\t-> "} + @enum_type_strings(Enum))...;
+	}
+
+	constexpr void check_const_lvalue_reference()
+	{
+		print("checking <" + @type_string(arithmetic_type) + "> and <" + @type_string(arithmetic_but_const_lvalue_reference) + "> ...");
+		@meta for(decltype(@enum_count(arithmetic_type)) i = 0; i < @enum_count(arithmetic_type); ++i)
+		{
+			print(
+					"checking std::add_const_t<std::add_lvalue_reference_t<" +
+					@enum_type_string(arithmetic_type, i) + "> == " +
+					@enum_type_string(arithmetic_but_const_lvalue_reference, i) + " ...... " +
+					((std::add_const_t<std::add_lvalue_reference_t<@enum_type(arithmetic_type, i)>> == @enum_type(arithmetic_but_const_lvalue_reference, i)) ?? "passed." : "failed."));
+		}
+	}
+}
+
 int main()
 {
+	@meta print("===========================");
+	print("===========================");
+
 	@meta enum_with_attribute::print_enum_with_attribute<enum_with_attribute::errc>();
 	enum_with_attribute::print_enum_with_attribute<enum_with_attribute::errc>();
+
+	@meta print("===========================");
+	print("===========================");
+
+	@meta enum_with_type::print_enum_with_type<enum_with_type::arithmetic_type>();
+	enum_with_type::print_enum_with_type<enum_with_type::arithmetic_type>();
+
+	@meta enum_with_type::print_enum_with_type<enum_with_type::arithmetic_but_const_lvalue_reference>();
+	enum_with_type::print_enum_with_type<enum_with_type::arithmetic_but_const_lvalue_reference>();
+
+	@meta enum_with_type::print_enum_with_type<enum_with_type::arithmetic_but_only_floating_point_and_reversed>();
+	enum_with_type::print_enum_with_type<enum_with_type::arithmetic_but_only_floating_point_and_reversed>();
+
+	@meta enum_with_type::check_const_lvalue_reference();
+	enum_with_type::check_const_lvalue_reference();
+
+	@meta print("===========================");
+	print("===========================");
 }
