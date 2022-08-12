@@ -359,6 +359,51 @@ namespace enum_with_algorithm
 	};
 }
 
+// ====================================================================
+// Typed enums are complete once the closing brace is hit, and cannot be
+// modified after that. If you want a dynamically modifiable set of types,
+// use an std::vector<@mtype>. @pack_type on an array, std::array or
+// std::vector of @mtype will yield a type parameter pack.
+// Use @dynamic_type and @static_type to convert to and from @mtypes.
+// ====================================================================
+namespace enum_with_modify
+{
+	enum typename enum_but_with_star
+	{
+		// elements will not be removed, use array.
+		@meta std::array packed_types{@dynamic_type(@enum_types(enum_with_algorithm::enum_template))...};
+
+		@meta std::array stared_types{@dynamic_type(@pack_type(packed_types)*)...};
+
+		// Note: Adding `*` has special meaning for array types.(int[42] ==> int(*)[42])
+		@pack_type(stared_types)...;
+	};
+
+	enum typename enum_but_with_reference
+	{
+		// Note: void& does not exist.
+		// elements will be removed, use vector.
+		@meta std::vector packed_types{@dynamic_type(@enum_types(enum_with_algorithm::enum_template))...};
+
+		@meta packed_types.erase(
+			std::remove_if(
+				packed_types.begin(),
+				packed_types.end(),
+				[](const auto& type)
+				{
+					return type == @dynamic_type(void);
+				}
+			),
+			packed_types.end()
+		);
+		
+		@meta std::array referenced_types{@dynamic_type(@pack_type(packed_types)&)...};
+
+		// Note: Adding `&` has special meaning for array types.(int[42] ==> int(&)[42])
+		@pack_type(referenced_types)...;
+	};
+}
+
 int main()
 {
 	@meta print(std::string{"CXX_STANDARD_VERSION ==> "} + std::to_string(__cplusplus));
@@ -404,4 +449,13 @@ int main()
 
 	@meta enum_with_type::print_enum_with_type<enum_with_algorithm::enum_but_sorted_lexicographically_stable>();
 	enum_with_type::print_enum_with_type<enum_with_algorithm::enum_but_sorted_lexicographically_stable>();
+
+	@meta print("===========================");
+	print("===========================");
+
+	@meta enum_with_type::print_enum_with_type<enum_with_modify::enum_but_with_star>();
+	enum_with_type::print_enum_with_type<enum_with_modify::enum_but_with_star>();
+
+	@meta enum_with_type::print_enum_with_type<enum_with_modify::enum_but_with_reference>();
+	enum_with_type::print_enum_with_type<enum_with_modify::enum_but_with_reference>();
 }
