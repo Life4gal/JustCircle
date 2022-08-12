@@ -537,6 +537,78 @@ namespace enum_with_name
 	}
 }
 
+namespace enum_with_concept
+{
+	enum typename enum_template
+	{
+		int,
+		double,
+		char[4],
+		float,
+		double(double),
+		float,
+		void*,
+	};
+
+	// Check if a type is in the list.
+	template<typename T, typename List>
+	constexpr bool is_type_in_list_v = ((T == @enum_types(List)) || ...);
+	//
+	// Use to get a count of the occurrences for a type in the list.
+	template<typename T, typename List>
+	constexpr std::size_t occurrence_in_list_v = (static_cast<std::size_t>(T == @enum_types(List)) + ...);
+	
+	// Search for the index of the first occurrences of T in list.
+	template<typename T, typename List>
+	constexpr std::size_t first_occurrence_in_list_v = std::min({ (T == @enum_types(List)) ? int... : @enum_count(List)... });
+
+	template<template<typename> typename Trait, typename List>
+	constexpr bool is_any_trait_in_list_v = std::disjunction_v<Trait<@enum_types(List)>...>;
+
+	template<template<typename> typename Trait, typename List>
+	constexpr bool is_all_trait_in_list_v = std::conjunction_v<Trait<@enum_types(List)>...>;
+
+	template<typename T, typename List = enum_template>
+	void test_type_in_list()
+	{
+		if constexpr (is_type_in_list_v<T, List>)
+		{
+			std::string message { "`" + @type_string(T) + "` occurrences in the " + @type_string(List) + " list `" + std::to_string(occurrence_in_list_v<T, List>) + "` times" };
+	
+			if constexpr (occurrence_in_list_v<T, List> == 1)
+			{
+				message += ".";
+			}
+			else
+			{
+				message += ", ";
+				message += "its first occurrence is at `" + std::to_string(first_occurrence_in_list_v<T, List>) + "` .";
+	
+			}
+			print(message);
+		}
+		else
+		{
+			print("`" + @type_string(T) + "` not occurrences in the " + @type_string(List) + " list.");
+		}
+	}
+
+	template<bool All = false, template<typename> typename Trait, typename List = enum_template>
+	void test_trait_in_list()
+	{
+		if constexpr (All)
+		{
+			// TODO: Trait needs a type, but we have to expand List in is_*_trait_in_list_v to get the type :(
+			print("Check all `" + @type_string(Trait<List>) + "` in the " + @type_string(List) + " list. --> " + std::to_string(is_all_trait_in_list_v<Trait, List>));
+		}
+		else
+		{
+			// TODO: Trait needs a type, but we have to expand List in is_*_trait_in_list_v to get the type :(
+			print("Check any `" + @type_string(Trait<List>) + "` in the " + @type_string(List) + " list. --> " + std::to_string(is_any_trait_in_list_v<Trait, List>));
+		}
+	}
+}
+
 int main()
 {
 	@meta print(std::string{"CXX_STANDARD_VERSION ==> "} + std::to_string(__cplusplus));
@@ -615,4 +687,28 @@ int main()
 
 	@meta enum_with_name::test_name_to_enum();
 	enum_with_name::test_name_to_enum();
+
+	@meta print("===========================");
+	print("===========================");
+
+	@meta enum_with_concept::test_type_in_list<int>();
+	enum_with_concept::test_type_in_list<int>();
+
+	@meta enum_with_concept::test_type_in_list<float>();
+	enum_with_concept::test_type_in_list<float>();
+
+	@meta enum_with_concept::test_type_in_list<double>();
+	enum_with_concept::test_type_in_list<double>();
+
+	@meta enum_with_concept::test_type_in_list<void>();
+	enum_with_concept::test_type_in_list<void>();
+
+	@meta enum_with_concept::test_trait_in_list<false, std::is_integral>();
+	enum_with_concept::test_trait_in_list<false, std::is_integral>();
+
+	@meta enum_with_concept::test_trait_in_list<false, std::is_function>();
+	enum_with_concept::test_trait_in_list<false, std::is_function>();
+
+	@meta enum_with_concept::test_trait_in_list<true, std::is_fundamental>();
+	enum_with_concept::test_trait_in_list<true, std::is_fundamental>();
 }
