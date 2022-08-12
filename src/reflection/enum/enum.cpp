@@ -6,6 +6,7 @@
 #include <random>
 #include <vector>
 #include <array>
+#include <optional>
 
 namespace
 {
@@ -448,6 +449,94 @@ namespace enum_with_tuple
 	using named_tuple_t = named_tuple<enum_types, enum_names>;
 }
 
+namespace enum_with_name
+{
+	template<typename Enum>
+	std::optional<const char*> enum_to_name(Enum e)
+	{
+		switch (e)
+		{
+			@meta for enum(auto current: Enum)
+			{
+				case current:
+					return current.string;
+			}
+
+			default:
+			{
+				return {};
+			}
+		}
+	}
+
+	template<typename Enum>
+	std::optional<Enum> name_to_enum(const char* name)
+	{
+		@meta for enum(auto current: Enum)
+		{
+			if (std::strcmp(current.string, name) == 0)
+			{
+				return current;
+			}
+		}
+		return {};
+	}
+
+	enum class enum_with_name
+	{
+		circle = 1 << 0,
+		ellipse = 1 << 1,
+		square = 1 << 2,
+		rectangle = 1 << 3,
+		octagon = 1 << 4,
+		trapezoid = 1 << 5,
+		rhombus = 1 << 6,
+	};
+
+	void test_enum_to_name()
+	{
+		// It seems that circle's support for `if(init; cond)` is not perfect? `values` cannot be used as `init` of `if`.
+		// That's OK :)
+		// ReSharper disable once CppTooWideScopeInitStatement
+		constexpr int values[]{1 << 0, 1 << 1, 1 << 2, 1 << 4, 1 << 8, 1 << 16}; 
+		for (auto value: values)
+		{
+			if (auto name = enum_to_name(static_cast<enum_with_name>(value));
+				name.has_value())
+			{
+				print("Matched " + @type_string(enum_with_name) + "(" + std::to_string(value) + ") --> " + *name);
+			}
+			else
+			{
+				print("Cannot match " + @type_string(enum_with_name) + "(" + std::to_string(value) + ")");
+			}
+		}
+	}
+
+	void test_name_to_enum()
+	{
+		constexpr const char* names[]{
+				"ellipse",
+				"rectangle",
+				"trapezoid",
+				"circle",
+				"Circle",
+		};
+		for (auto name : names)
+		{
+			if (auto e = name_to_enum<enum_with_name>(name);
+				e.has_value())
+			{
+				print(std::string{"Matched "} + @type_string(enum_with_name) + "(" + name + ") --> " + std::to_string(static_cast<int>(*e)));
+			}
+			else
+			{
+				print(std::string{"Cannot match "} + @type_string(enum_with_name) + "(" + name + ")");
+			}
+		}
+	}
+}
+
 int main()
 {
 	@meta print(std::string{"CXX_STANDARD_VERSION ==> "} + std::to_string(__cplusplus));
@@ -509,8 +598,21 @@ int main()
 	// Print the member declares of the tuple.
 	@meta print("super indexed tuple:");
 	@meta print("\t" + @member_decl_strings(enum_with_tuple::indexed_tuple_t))...;
+	print("super indexed tuple:");
+	print("\t" + @member_decl_strings(enum_with_tuple::indexed_tuple_t))...;
 
 	// Print the member declares of the tuple.
 	@meta print("super named tuple:");
 	@meta print("\t" + @member_decl_strings(enum_with_tuple::named_tuple_t))...;
+	print("super named tuple:");
+	print("\t" + @member_decl_strings(enum_with_tuple::named_tuple_t))...;
+
+	@meta print("===========================");
+	print("===========================");
+
+	@meta enum_with_name::test_enum_to_name();
+	enum_with_name::test_enum_to_name();
+
+	@meta enum_with_name::test_name_to_enum();
+	enum_with_name::test_name_to_enum();
 }
