@@ -404,6 +404,50 @@ namespace enum_with_modify
 	};
 }
 
+namespace enum_with_tuple
+{
+	template<typename ... Ts>
+	struct indexed_tuple
+	{
+		// int... is an expression that yields the index of the current element.
+		Ts @(int...)...;
+	};
+
+	enum typename enum_types
+	{
+		// `void` cannot be instantiated as a member type
+		// void,
+		int,
+		const char*,
+		std::string,
+		std::vector<std::string>,
+		void (*)(int, const char*),
+		std::vector<std::string>(&)(const char*, std::string&),
+	};
+
+	// Instantiate a tuple with these types.
+	using indexed_tuple_t = indexed_tuple<@enum_types(enum_types)...>;
+
+	enum class enum_names
+	{
+		INT,
+		CONST_CHAR_STAR,
+		STD_STRING,
+		STD_VECTOR_STD_STRING,
+		VOID_STAR_INT_CONST_CHAR_STAR,
+		STD_VECTOR_STD_STRING_REFERENCE_CONST_CHAR_STAR_STD_STRING_REFERENCE,
+	};
+
+	template<typename IndexedTuple, typename ElementName>
+	struct named_tuple
+	{
+		@enum_types(IndexedTuple) @(@enum_names(ElementName))...;
+	};
+
+	// Instantiate a tuple with these names.
+	using named_tuple_t = named_tuple<enum_types, enum_names>;
+}
+
 int main()
 {
 	@meta print(std::string{"CXX_STANDARD_VERSION ==> "} + std::to_string(__cplusplus));
@@ -458,4 +502,15 @@ int main()
 
 	@meta enum_with_type::print_enum_with_type<enum_with_modify::enum_but_with_reference>();
 	enum_with_type::print_enum_with_type<enum_with_modify::enum_but_with_reference>();
+
+	@meta print("===========================");
+	print("===========================");
+
+	// Print the member declares of the tuple.
+	@meta print("super indexed tuple:");
+	@meta print("\t" + @member_decl_strings(enum_with_tuple::indexed_tuple_t))...;
+
+	// Print the member declares of the tuple.
+	@meta print("super named tuple:");
+	@meta print("\t" + @member_decl_strings(enum_with_tuple::named_tuple_t))...;
 }
